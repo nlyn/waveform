@@ -1,0 +1,14 @@
+{
+    "name": "cypherq/waveform",
+    "description": "PHP port of Soundclound Waveform.js",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Benedykt Dryl",
+            "email": "cypherq@gmail.com"
+        }
+    ],
+    "require": {
+
+    }
+}
