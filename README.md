@@ -19,8 +19,6 @@ $options 	= array(
   'height' => 160
 );
 
-use cypherq\Waveform\Waveform;
-
 $waveform 	= new Waveform($options);
 $waveform->createWaveform();
 $waveform->toImage('test.png');

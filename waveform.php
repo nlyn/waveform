@@ -1,6 +1,5 @@
 <?php
 
-namespace cypherq\Waveform;
 /**
  * Class Waveform
  */
