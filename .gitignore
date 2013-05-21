@@ -22,3 +22,8 @@ Icon
 #library cache
 cache/
 /vendor/
+
+*.png
+*.jpg
+*.jpeg
+example.php
