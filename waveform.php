@@ -19,7 +19,8 @@ class Waveform
         $this->outerColor  = $options['outerColor'];
 
         /* check if padding first */
-        $this->padding = isset($options['padding']) ? ($options['padding']/100) : 0;
+        $this->horizontalPadding = isset($options['horizontalPadding']) ? ($options['horizontalPadding'] / 100) : 0;
+        $this->verticalPadding = isset($options['verticalPadding']) ? ($options['verticalPadding'] / 100) : 0;
 
         /* process original dimensions, pdadings etc. */
         $this->setDimensions($options);
@@ -38,8 +39,8 @@ class Waveform
         $this->originalHeight      = $options['height'];
 
         /* image size */
-        $this->width       = $this->originalWidth - ($this->originalWidth * $this->padding * 2);
-        $this->height      = $this->originalHeight - ($this->originalHeight * $this->padding * 2);
+        $this->width       = $this->originalWidth - ($this->originalWidth * $this->horizontalPadding * 2);
+        $this->height      = $this->originalHeight - ($this->originalHeight * $this->verticalPadding * 2);
 
         /* one side padding */
         $this->diffWidth    = ($this->originalWidth - $this->width) / 2;

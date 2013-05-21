@@ -21,7 +21,8 @@ $options 	= array(
   'height' => 160,
 
   /* padding in percents */
-  'padding' => 5
+  'verticalPadding' => 5,
+  'horizontalPadding' => 1
 );
 
 $waveform 	= new Waveform($options);
