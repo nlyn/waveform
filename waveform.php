@@ -18,9 +18,11 @@ class Waveform
         /* background color */
         $this->outerColor  = $options['outerColor'];
 
-        /* image size */
-        $this->width       = $options['width'];
-        $this->height      = $options['height'];
+        /* check if padding first */
+        $this->padding = isset($options['padding']) ? ($options['padding']/100) : 0;
+
+        /* process original dimensions, pdadings etc. */
+        $this->setDimensions($options);
 
         /* use interpolating to make spectrogram more smooth */
         $this->interpolate = isset($options['interpolate']) ? $options['interpolate'] : TRUE;
@@ -29,12 +31,27 @@ class Waveform
         $this->createImage();
     }
 
+    private function setDimensions($options)
+    {
+        /* save original sizes */
+        $this->originalWidth       = $options['width'];
+        $this->originalHeight      = $options['height'];
+
+        /* image size */
+        $this->width       = $this->originalWidth - ($this->originalWidth * $this->padding * 2);
+        $this->height      = $this->originalHeight - ($this->originalHeight * $this->padding * 2);
+
+        /* one side padding */
+        $this->diffWidth    = ($this->originalWidth - $this->width) / 2;
+        $this->diffHeight   = ($this->originalHeight - $this->height) / 2;
+    }
+
     /**
      * Prepare GD image object
      */
     private function createImage()
     {
-        $this->img = imagecreatetruecolor($this->width, $this->height);
+        $this->img = imagecreatetruecolor($this->originalWidth, $this->originalHeight);
 
         /* prepare RGB values of background color */
         list($r, $g, $b) = $this->html2rgb($this->outerColor);
@@ -49,10 +66,11 @@ class Waveform
      */
     public function createWaveform()
     {
-        /*  */
+        /* process amplitudes values */
         $method     = ($this->interpolate) ? 'interpolateArray' : 'expandArray';
         $this->data = ($this->$method($this->data, $this->width));
 
+        /* draw spectrogram on image object */
         $this->createSpectogram();
     }
 
@@ -70,8 +88,8 @@ class Waveform
         foreach ($this->data as $i => $item) {
             $t = $this->width / count($this->data);
 
-            $x1 = $t * $i;
-            $y1 = round($middle - $middle * $item);
+            $x1 = $t * $i + $this->diffWidth;
+            $y1 = round($middle - $middle * $item) + $this->diffHeight;
 
             $x2 = $x1 + $t;
             $y2 = $y1 + round($middle * $item * 2);
