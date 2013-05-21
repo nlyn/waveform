@@ -13,10 +13,15 @@ $data 		= array(0.00979614,0.0212708,0.0258484,0.0361633,0.0321045,0.0260925,0.1
 
 $options 	= array(
   'data' => $data, 
+  
   'innerColor' => '#ffffff', 
   'outerColor' => '#f25d55', 
+  
   'width' => 400, 
-  'height' => 160
+  'height' => 160,
+
+  /* padding in percents */
+  'padding' => 5
 );
 
 $waveform 	= new Waveform($options);
