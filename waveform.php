@@ -5,18 +5,20 @@
  */
 class Waveform
 {
+    public $smoothAlpha = FALSE;
+
     /**
      * @param $options
      */
     public function __construct($options)
     {
-        $this->data        = $options['data'];
+        $this->data = $options['data'];
 
         /* spectogram color*/
-        $this->innerColor  = $options['innerColor'];
+        $this->innerColor = $options['innerColor'];
 
         /* background color */
-        $this->outerColor  = $options['outerColor'];
+        $this->outerColor = $options['outerColor'];
 
         /* process original dimensions, pdadings etc. */
         $this->setDimensions($options);
@@ -31,20 +33,20 @@ class Waveform
     private function setDimensions($options)
     {
         /* check if padding first */
-        $this->horizontalPadding    = isset($options['horizontalPadding']) ? ($options['horizontalPadding'] / 100) : 0;
-        $this->verticalPadding      = isset($options['verticalPadding']) ? ($options['verticalPadding'] / 100) : 0;
+        $this->horizontalPadding = isset($options['horizontalPadding']) ? ($options['horizontalPadding'] / 100) : 0;
+        $this->verticalPadding   = isset($options['verticalPadding']) ? ($options['verticalPadding'] / 100) : 0;
 
         /* save original sizes */
-        $this->originalWidth       = $options['width'];
-        $this->originalHeight      = $options['height'];
+        $this->originalWidth  = $options['width'];
+        $this->originalHeight = $options['height'];
 
         /* image size */
-        $this->width       = $this->originalWidth - ($this->originalWidth * $this->horizontalPadding * 2);
-        $this->height      = $this->originalHeight - ($this->originalHeight * $this->verticalPadding * 2);
+        $this->width  = $this->originalWidth - ($this->originalWidth * $this->horizontalPadding * 2);
+        $this->height = $this->originalHeight - ($this->originalHeight * $this->verticalPadding * 2);
 
         /* one side padding */
-        $this->diffWidth    = ($this->originalWidth - $this->width) / 2;
-        $this->diffHeight   = ($this->originalHeight - $this->height) / 2;
+        $this->diffWidth  = ($this->originalWidth - $this->width) / 2;
+        $this->diffHeight = ($this->originalHeight - $this->height) / 2;
     }
 
     /**
@@ -70,7 +72,7 @@ class Waveform
             $this->width, $this->height,
             $this->diffWidth, $this->diffHeight,
             $this->originalData,
-            $this->method,    
+            $this->method,
             $this->data,
             count($this->data)
         );
@@ -97,11 +99,11 @@ class Waveform
     private function createSpectogram()
     {
         /* prepare spectrogram color in RGB values */
-        list($r, $g, $b)    = $this->html2rgb($this->innerColor);
-        $innerColor         = imagecolorallocate($this->img, $r, $g, $b);
+        list($r, $g, $b) = $this->html2rgb($this->innerColor);
+        $innerColor = imagecolorallocate($this->img, $r, $g, $b);
 
-        $dataSize   = count($this->data);
-        $middle     = $this->height / 2;
+        $dataSize = count($this->data);
+        $middle   = $this->height / 2;
 
         foreach ($this->data as $i => $item) {
             $t = $this->width / $dataSize;
@@ -112,7 +114,13 @@ class Waveform
             $x2 = $x1 + $t;
             $y2 = $y1 + round($middle * $item * 2);
 
-            imageline($this->img, $x1, $y1, $x2, $y2, $innerColor);
+            if($this->smoothAlpha) {
+                /* experimental and not tested fully feature */
+                $this->imageSmoothAlphaLine($this->img, $x1, $y1, $x2, $y2, $r, $g, $b, 0);
+            }
+            else {
+                imageline($this->img, $x1, $y1, $x2, $y2, $innerColor);
+            }
         }
     }
 
@@ -196,6 +204,87 @@ class Waveform
     {
         imagepng($this->img, $filename);
         imagedestroy($this->img);
+    }
+
+    /**
+     * function imageSmoothAlphaLine() - version 1.0
+     * Draws a smooth line with alpha-functionality
+     *
+     * @param   ident    the image to draw on
+     * @param   integer  x1
+     * @param   integer  y1
+     * @param   integer  x2
+     * @param   integer  y2
+     * @param   integer  red (0 to 255)
+     * @param   integer  green (0 to 255)
+     * @param   integer  blue (0 to 255)
+     * @param   integer  alpha (0 to 127)
+     *
+     * @access  public
+     *
+     * @author  DASPRiD <d@sprid.de>
+     */
+    function imageSmoothAlphaLine($image, $x1, $y1, $x2, $y2, $r, $g, $b, $alpha = 0)
+    {
+        $icr  = $r;
+        $icg  = $g;
+        $icb  = $b;
+        $dcol = imagecolorallocatealpha($image, $icr, $icg, $icb, $alpha);
+
+        if ($y1 == $y2 || $x1 == $x2) {
+            imageline($image, $x1, $y2, $x1, $y2, $dcol);
+        } else {
+            $m = ($y2 - $y1) / ($x2 - $x1);
+            $b = $y1 - $m * $x1;
+
+            if (abs($m) < 2) {
+                $x    = min($x1, $x2);
+                $endx = max($x1, $x2) + 1;
+
+                while ($x < $endx) {
+                    $y  = $m * $x + $b;
+                    $ya = ($y == floor($y) ? 1 : $y - floor($y));
+                    $yb = ceil($y) - $y;
+
+                    $trgb = imageColorAt($image, $x, floor($y));
+                    $tcr  = ($trgb >> 16) & 0xFF;
+                    $tcg  = ($trgb >> 8) & 0xFF;
+                    $tcb  = $trgb & 0xFF;
+                    imagesetpixel($image, $x, floor($y), imagecolorallocatealpha($image, ($tcr * $ya + $icr * $yb), ($tcg * $ya + $icg * $yb), ($tcb * $ya + $icb * $yb), $alpha));
+
+                    $trgb = imageColorAt($image, $x, ceil($y));
+                    $tcr  = ($trgb >> 16) & 0xFF;
+                    $tcg  = ($trgb >> 8) & 0xFF;
+                    $tcb  = $trgb & 0xFF;
+                    imagesetpixel($image, $x, ceil($y), imagecolorallocatealpha($image, ($tcr * $yb + $icr * $ya), ($tcg * $yb + $icg * $ya), ($tcb * $yb + $icb * $ya), $alpha));
+
+                    $x++;
+                }
+            } else {
+                $y    = min($y1, $y2);
+                $endy = max($y1, $y2) + 1;
+
+                while ($y < $endy) {
+                    $x  = ($y - $b) / $m;
+                    $xa = ($x == floor($x) ? 1 : $x - floor($x));
+                    $xb = ceil($x) - $x;
+
+                    $trgb = imageColorAt($image, floor($x), $y);
+                    $tcr  = ($trgb >> 16) & 0xFF;
+                    $tcg  = ($trgb >> 8) & 0xFF;
+                    $tcb  = $trgb & 0xFF;
+                    imagesetpixel($image, floor($x), $y, imagecolorallocatealpha($image, ($tcr * $xa + $icr * $xb), ($tcg * $xa + $icg * $xb), ($tcb * $xa + $icb * $xb), $alpha));
+
+                    $trgb = imageColorAt($image, ceil($x), $y);
+                    $tcr  = ($trgb >> 16) & 0xFF;
+                    $tcg  = ($trgb >> 8) & 0xFF;
+                    $tcb  = $trgb & 0xFF;
+                    imagesetpixel($image, ceil($x), $y, imagecolorallocatealpha($image, ($tcr * $xb + $icr * $xa), ($tcg * $xb + $icg * $xa), ($tcb * $xb + $icb * $xa), $alpha));
+
+                    $y++;
+                }
+            }
+        }
     }
 }
 
