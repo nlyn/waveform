@@ -97,7 +97,8 @@ class Waveform
     private function createSpectogram()
     {
         /* prepare spectrogram color in RGB values */
-        list($r, $g, $b) = $this->html2rgb($this->innerColor);
+        list($r, $g, $b)    = $this->html2rgb($this->innerColor);
+        $innerColor         = imagecolorallocate($this->img, $r, $g, $b);
 
         $dataSize   = count($this->data);
         $middle     = $this->height / 2;
@@ -111,7 +112,7 @@ class Waveform
             $x2 = $x1 + $t;
             $y2 = $y1 + round($middle * $item * 2);
 
-            imagefilledrectangle($this->img, $x1, $y1, $x2, $y2, imagecolorallocate($this->img, $r, $g, $b));
+            imageline($this->img, $x1, $y1, $x2, $y2, $innerColor);
         }
     }
 
