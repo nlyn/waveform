@@ -5,7 +5,18 @@
  */
 class Waveform
 {
-    public $smoothAlpha = FALSE;
+    /**
+     * @var string
+     */
+    private $lineMethod = '';
+
+
+    public function setLineMethod($method)
+    {
+        if(!empty($method)) {
+            $this->lineMethod = $method;
+        }
+    }
 
     /**
      * @param $options
@@ -41,8 +52,8 @@ class Waveform
         $this->originalHeight = $options['height'];
 
         /* image size */
-        $this->width  = $this->originalWidth - ($this->originalWidth * $this->horizontalPadding * 2);
-        $this->height = $this->originalHeight - ($this->originalHeight * $this->verticalPadding * 2);
+        $this->width  = round($this->originalWidth - ($this->originalWidth * $this->horizontalPadding * 2));
+        $this->height = round($this->originalHeight - ($this->originalHeight * $this->verticalPadding * 2));
 
         /* one side padding */
         $this->diffWidth  = ($this->originalWidth - $this->width) / 2;
@@ -114,13 +125,8 @@ class Waveform
             $x2 = $x1 + $t;
             $y2 = $y1 + round($middle * $item * 2);
 
-            if($this->smoothAlpha) {
-                /* experimental and not tested fully feature */
-                $this->imageSmoothAlphaLine($this->img, $x1, $y1, $x2, $y2, $r, $g, $b, 0);
-            }
-            else {
-                imageline($this->img, $x1, $y1, $x2, $y2, $innerColor);
-            }
+            $lineMethodName = 'imageline' . ucfirst($this->lineMethod);
+            $this->$lineMethodName($this->img, $x1, $y1, $x2, $y2, $innerColor);
         }
     }
 
@@ -206,6 +212,18 @@ class Waveform
         imagedestroy($this->img);
     }
 
+    private function imagelineSmooth($image, $x1, $y1, $x2, $y2, $color)
+    {
+            for($j = $y1; $j < $y2; $j++) {
+                imagesetpixel($image, $x1, $j, $color);
+            }
+    }
+
+    private function imagelineNormal($img, $x1, $y1, $x2, $y2, $innerColor)
+    {
+        imageline($img, $x1, $y1, $x2, $y2, $innerColor);
+    }
+
     /**
      * function imageSmoothAlphaLine() - version 1.0
      * Draws a smooth line with alpha-functionality
@@ -224,8 +242,10 @@ class Waveform
      *
      * @author  DASPRiD <d@sprid.de>
      */
-    function imageSmoothAlphaLine($image, $x1, $y1, $x2, $y2, $r, $g, $b, $alpha = 0)
+    private function imagelineSmoothAlpha($image, $x1, $y1, $x2, $y2, $color, $alpha = 0)
     {
+        list($r, $g, $b) = $this->html2rgb($color);
+
         $icr  = $r;
         $icg  = $g;
         $icb  = $b;
