@@ -18,10 +18,6 @@ class Waveform
         /* background color */
         $this->outerColor  = $options['outerColor'];
 
-        /* check if padding first */
-        $this->horizontalPadding = isset($options['horizontalPadding']) ? ($options['horizontalPadding'] / 100) : 0;
-        $this->verticalPadding = isset($options['verticalPadding']) ? ($options['verticalPadding'] / 100) : 0;
-
         /* process original dimensions, pdadings etc. */
         $this->setDimensions($options);
 
@@ -34,6 +30,10 @@ class Waveform
 
     private function setDimensions($options)
     {
+        /* check if padding first */
+        $this->horizontalPadding    = isset($options['horizontalPadding']) ? ($options['horizontalPadding'] / 100) : 0;
+        $this->verticalPadding      = isset($options['verticalPadding']) ? ($options['verticalPadding'] / 100) : 0;
+
         /* save original sizes */
         $this->originalWidth       = $options['width'];
         $this->originalHeight      = $options['height'];
@@ -62,14 +62,30 @@ class Waveform
         imagefill($this->img, 0, 0, $backgroundColor);
     }
 
+    public function dumpWaveformData()
+    {
+        return array(
+            $this->horizontalPadding, $this->verticalPadding,
+            $this->originalWidth, $this->originalHeight,
+            $this->width, $this->height,
+            $this->diffWidth, $this->diffHeight,
+            $this->originalData,
+            $this->method,    
+            $this->data,
+            count($this->data)
+        );
+    }
+
     /**
      * normalize data and create spectrogram
      */
     public function createWaveform()
     {
         /* process amplitudes values */
-        $method     = ($this->interpolate) ? 'interpolateArray' : 'expandArray';
-        $this->data = ($this->$method($this->data, $this->width));
+        $method             = ($this->interpolate) ? 'interpolateArray' : 'expandArray';
+        $this->originalData = $this->data;
+        $this->data         = ($this->$method($this->data, $this->width));
+        $this->method       = $method;
 
         /* draw spectrogram on image object */
         $this->createSpectogram();
@@ -83,11 +99,11 @@ class Waveform
         /* prepare spectrogram color in RGB values */
         list($r, $g, $b) = $this->html2rgb($this->innerColor);
 
-        /* find vertical center of image */
-        $middle = $this->height / 2;
+        $dataSize   = count($this->data);
+        $middle     = $this->height / 2;
 
         foreach ($this->data as $i => $item) {
-            $t = $this->width / count($this->data);
+            $t = $this->width / $dataSize;
 
             $x1 = $t * $i + $this->diffWidth;
             $y1 = round($middle - $middle * $item) + $this->diffHeight;
