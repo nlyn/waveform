@@ -8,37 +8,71 @@ class Waveform
     /**
      * @var string
      */
-    private $lineMethod = '';
-
-
-    public function setLineMethod($method)
-    {
-        if(!empty($method)) {
-            $this->lineMethod = $method;
-        }
-    }
+    private $lineMethod = 'imagelineNormal';
+    
+    /**
+     * @var array amplitudes array
+     */
+    private $data = array();
 
     /**
-     * @param $options
+     * @var array hex values of colors used during waveform generating
      */
-    public function __construct($options)
+    private $color = array(
+        'background' => '#FFFFFF',
+        'foreground' => '#000000'
+    );
+    
+    /**
+     * @var bool by default, always try to interpolate data
+     */
+    private $interpolate = TRUE;
+
+    private $normalizeData = FALSE;
+
+    /**
+     * @param array $options
+     */
+    public function __construct(Array $options)
     {
+        /* array of amplitudes */
         $this->data = $options['data'];
 
-        /* spectogram color*/
+        /* spectrogram color*/
         $this->innerColor = $options['innerColor'];
 
         /* background color */
         $this->outerColor = $options['outerColor'];
 
-        /* process original dimensions, pdadings etc. */
+        /* process original dimensions, padding etc. */
         $this->setDimensions($options);
 
         /* use interpolating to make spectrogram more smooth */
         $this->interpolate = isset($options['interpolate']) ? $options['interpolate'] : TRUE;
+        $this->normalizeData = isset($options['normalizeData']) ? $options['normalizeData'] : TRUE;
 
         /* prepare GD image object */
         $this->createImage();
+    }
+
+    public function normalizeData()
+    {
+        $total      = 0;
+        $expected   = 0.65;
+
+        foreach ($this->data as $key => $value) {
+            $total += $value;
+        }
+
+        $avg = $total/count($this->data);
+        
+        if($avg < $expected) {
+            $diff = $expected - $avg;
+        }
+
+        foreach ($this->data as $key => $value) {
+            $this->data[$key] = $value + (($value > 0) ? $diff : 0);
+        }
     }
 
     private function setDimensions($options)
@@ -75,18 +109,34 @@ class Waveform
         imagefill($this->img, 0, 0, $backgroundColor);
     }
 
-    public function dumpWaveformData()
+    /**
+     * @param $hexColor
+     * @return array
+     */
+    private function html2rgb($hexColor)
     {
+        $hexColor = ($hexColor[0] == "#") ? substr($hexColor, 1, 6) : substr($hexColor, 0, 6);
+
         return array(
-            $this->horizontalPadding, $this->verticalPadding,
-            $this->originalWidth, $this->originalHeight,
-            $this->width, $this->height,
-            $this->diffWidth, $this->diffHeight,
-            $this->originalData,
-            $this->method,
-            $this->data,
-            count($this->data)
+            hexdec(substr($hexColor, 0, 2)),
+            hexdec(substr($hexColor, 2, 2)),
+            hexdec(substr($hexColor, 4, 2))
         );
+    }
+
+    /**
+     * @param $method line rendering method
+     * @throws Exception
+     */
+    public function setLineMethod($method)
+    {
+        $method = 'imageline' . ucfirst($method);
+
+        if (!method_exists($this, $method)) {
+            throw new Exception('Line rendering method ' . $method . ' not found!');
+        }
+
+        $this->lineMethod = $method;
     }
 
     /**
@@ -99,6 +149,10 @@ class Waveform
         $this->originalData = $this->data;
         $this->data         = ($this->$method($this->data, $this->width));
         $this->method       = $method;
+
+        if($this->normalizeData) {
+            $this->normalizeData();
+        }
 
         /* draw spectrogram on image object */
         $this->createSpectogram();
@@ -125,20 +179,18 @@ class Waveform
             $x2 = $x1 + $t;
             $y2 = $y1 + round($middle * $item * 2);
 
-            $lineMethodName = 'imageline' . ucfirst($this->lineMethod);
+            $lineMethodName = $this->lineMethod;
             $this->$lineMethodName($this->img, $x1, $y1, $x2, $y2, $innerColor);
         }
     }
 
     /**
-     * @param $before
-     * @param $after
-     * @param $atPoint
-     * @return mixed
+     * @param $filename
      */
-    private function linearInterpolate($before, $after, $atPoint)
+    public function toImage($filename)
     {
-        return $before + ($after - $before) * $atPoint;
+        imagepng($this->img, $filename);
+        imagedestroy($this->img);
     }
 
     /**
@@ -168,6 +220,17 @@ class Waveform
     }
 
     /**
+     * @param $before
+     * @param $after
+     * @param $atPoint
+     * @return mixed
+     */
+    private function linearInterpolate($before, $after, $atPoint)
+    {
+        return $before + ($after - $before) * $atPoint;
+    }
+
+    /**
      * @param $data
      * @param $limit
      * @param int $defaultValue
@@ -188,35 +251,11 @@ class Waveform
         return $newData;
     }
 
-    /**
-     * @param $hexColor
-     * @return array
-     */
-    private function html2rgb($hexColor)
-    {
-        $hexColor = ($hexColor[0] == "#") ? substr($hexColor, 1, 6) : substr($hexColor, 0, 6);
-
-        return array(
-            hexdec(substr($hexColor, 0, 2)),
-            hexdec(substr($hexColor, 2, 2)),
-            hexdec(substr($hexColor, 4, 2))
-        );
-    }
-
-    /**
-     * @param $filename
-     */
-    public function toImage($filename)
-    {
-        imagepng($this->img, $filename);
-        imagedestroy($this->img);
-    }
-
     private function imagelineSmooth($image, $x1, $y1, $x2, $y2, $color)
     {
-            for($j = $y1; $j < $y2; $j++) {
-                imagesetpixel($image, $x1, $j, $color);
-            }
+        for ($j = $y1; $j < $y2; $j++) {
+            imagesetpixel($image, $x1, $j, $color);
+        }
     }
 
     private function imagelineNormal($img, $x1, $y1, $x2, $y2, $innerColor)
@@ -307,5 +346,3 @@ class Waveform
         }
     }
 }
-
-?>
