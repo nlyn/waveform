@@ -13,7 +13,7 @@ class Waveform
     /**
      * @var array amplitudes array
      */
-    private $data = array();
+    public $data = array();
 
     /**
      * @var array hex values of colors used during waveform generating
