@@ -57,6 +57,7 @@ class Waveform
 
     public function normalizeData()
     {
+        $diff       = 0;
         $total      = 0;
         $expected   = 0.65;
 
