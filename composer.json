@@ -1,5 +1,5 @@
 {
-    "name": "cypherq/waveform",
+    "name": "nlyn/waveform",
     "description": "PHP port of Soundclound Waveform.js",
     "license": "MIT",
     "authors": [
